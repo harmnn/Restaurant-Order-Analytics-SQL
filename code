@@ -1,0 +1,171 @@
+show databases;
+create database sqqll;
+use sqqll;
+
+describe  orders_medium;
+describe  menu_items;
+describe customers_medium;
+describe order_items;
+describe restaurants;
+
+-- total number of orders 
+select count(*) as total_number_of_orders from orders_medium;
+
+-- total revenue generated
+select sum(price) as total_revenue from order_items;
+
+-- number of diastint customers
+select count(distinct customer_id) from customers_medium;
+
+-- number of restraunts
+select count(distinct  restaurant_id) from restaurants;
+
+-- total number od item sold
+select count(quantity) from order_items;
+
+-- average price of item sold 
+select avg(price) from order_items;
+
+-- top 5 customers by total spending
+select cust, RANK() over (order by spend desc) as rak 
+from 
+(select oo.customer_id as cust, sum(o.quantity*o.price)as spend from
+
+order_items as o join orders_medium as oo
+on o.order_id=oo.order_id
+group by customer_id
+)t 
+limit 5;
+
+-- Customers who placed more than 1 order
+
+select customer_id, count(order_id) 
+from orders_medium group by customer_id having count(order_id)>1;
+
+-- avg spend per customer
+select avg(totalper) from (
+select sum(o.quantity*o.price)as totalper,oo.customer_id as cust from order_items o
+join orders_medium as oo
+on o.order_id=oo.order_id
+group by cust
+)t
+;
+
+-- Customers who never placed an order (if possible)
+select c.customer_id from customers_medium as c
+left join orders_medium as o
+on o.customer_id=c.customer_id
+where o.customer_id is null;
+
+-- city wise customer distribution 
+select COUNT(customer_id), city from customers_medium
+group by city ;
+
+
+-- highest revenue by city
+select c.city,sum(oo.quantity*oo.price) from customers_medium as c
+join orders_medium as o 
+on o.customer_id=c.customer_id
+join order_items as oo
+on o.order_id=oo.order_id
+group by city ;
+
+-- ost ordered item by  quantity 
+select  count(item_id) as most_ordered , item_id as most_ordered from order_items 
+group by item_id
+order by most_ordered desc
+limit 1;
+
+-- highest revenue generating item
+
+select sum(quantity*price) as revenue ,item_id from order_items
+group by item_id
+order by revenue desc
+limit 1;
+
+-- items never ordered
+select m.item_id as never_ordered_items from menu_items  m
+left join order_items o on o.item_id=m.item_id
+where o.item_id is null;
+
+-- average price of item
+
+select avg(price) from order_items;
+
+-- Items with highest average order quantity
+
+select avg(quantity), item_id from order_items
+group by item_id
+order by avg(quantity) desc limit 1;
+
+
+
+-- Top restaurants by revenue
+
+select sum(i.quantity*i.price)  as revenue ,r.restaurant_id from orders_medium as o
+join order_items as i
+on o.order_id=i.order_id
+join restaurants as r
+on r.restaurant_id=o.restaurant_id
+group by o.restaurant_id
+order by revenue desc
+;
+
+-- Top restaurants by number of orders
+
+select count(distinct i.order_id)  as total_order ,r.restaurant_id from orders_medium as o
+join order_items as i
+on o.order_id=i.order_id
+join restaurants as r
+on r.restaurant_id=o.restaurant_id
+group by o.restaurant_id
+order by total_order desc;
+
+
+-- avg rating per cusine
+
+select avg(rating), cuisine from restaurants
+group by cuisine;
+
+-- city by restaurant count
+
+select count(restaurant_id), city from restaurants
+group by city;
+
+
+-- cancled vs fulfiled order
+select status , count(order_id) from orders_medium 
+group by status;
+
+-- Orders with highest value
+select i.order_id, sum(i.quantity*i.price) as total from orders_medium o
+join order_items i on o.order_id=i.order_id 
+group by order_id
+order by total desc
+limit 1;
+
+-- Average delivery time
+select avg(delivery_time) from orders_medium;
+
+-- Compare delivery time across restaurants
+
+select avg(delivery_time),restaurant_id from orders_medium
+group by restaurant_id;
+
+--  slowest restaurant
+
+
+select avg(delivery_time),restaurant_id from orders_medium
+group by restaurant_id
+order by avg(delivery_time) desc
+limit 1;
+
+
+-- Fastest restaurant
+select avg(delivery_time),restaurant_id from orders_medium
+where restaurant_id is not null
+AND delivery_time IS NOT NULL    -- Also exclude NULL delivery times
+AND delivery_time > 0
+group by restaurant_id
+order by avg(delivery_time) 
+limit 2;
